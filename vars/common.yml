@@ -1,0 +1,8 @@
+---
+use_custom_ca_bundle: "true"
+custom_ca_file: "/tmp/ca-bundle.crt"
+append_custom_ca: "false"
+use_keycloak_ca: "false"
+keycloak_ca_cm_name: "ca-bundle"
+custom_ca_cm_file: "/tmp/ca-bundle.yml"
+aws_ssh_private_key_name: "sparta"
