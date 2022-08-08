@@ -1,0 +1,85 @@
+---
+# tasks file for ocp-cluster-login
+- name: Validate required variables 1 of 2
+  assert:
+    that:
+      - (ocp_cluster_kubeconfig is defined and ocp_cluster_kubeconfig != "") or (ocp_cluster_token is defined and ocp_cluster_token != "") or ((ocp_cluster_user_user is defined and ocp_cluster_user_user != "") and (ocp_cluster_user_password is defined and ocp_cluster_user_password != "") )
+    msg: "One of the following variable is required ocp_cluster_kubeconfig, ocp_cluster_token, or ocp_cluster_user_user and ocp_cluster_user_password is required"
+
+- name: Validate required variables 2 of 2
+  assert:
+    that:
+      - ocp_cluster_console_url is defined and ocp_cluster_console_url != '' 
+    msg: "The API URL for the cluster is required "
+
+- name: Authenticate with the API using kubeconfig file
+  when:
+    - ocp_cluster_kubeconfig is defined and ocp_cluster_kubeconfig != ""
+  block:
+    - name: Ensure the kubeconfig file exist on the controller
+      stat:
+        path: "{{ ocp_cluster_kubeconfig }}"
+      register: kubeconfig_exists
+
+    - name: Copy the kubeconfig file from controller to target host if target is different from localhost
+      copy: 
+        src: "{{ ocp_cluster_kubeconfig }}"
+        dest: "{{ ansible_env.HOME }}/{{ ocp_cluster_kubeconfig | basename }}"
+        mode: '0644'
+      when:
+        - inventory_hostname != 'localhost'
+      register: kubeconfig_copied
+
+    - name: Set the KUBECONFIG file location fact
+      set_fact:
+        kubeconfig_file: "{{ kubeconfig_copied if kubeconfig_copied is defined and kubeconfig_copied.dest is defined and kubeconfig_copied.dest != '' else ocp_cluster_kubeconfig }}"
+
+    - name: Set the KUBECONFIG env for the user running the playbook
+      blockinfile:
+        path: "{{ ansible_env.HOME }}/.bashrc"
+        insertafter: EOF
+        state: present
+        marker: "# {mark} ANSIBLE MANAGED BLOCK Adding KUBECONFIG"
+        block: |-
+          export KUBECONFIG="{{ kubeconfig_file }}"
+      when:
+        - kubeconfig_exists is defined
+        - kubeconfig_exists.stat is defined
+        - kubeconfig_exists.stat.exists is defined and kubeconfig_exists.stat.exists | bool
+        - kubeconfig_exists.stat.isreg is defined and kubeconfig_exists.stat.isreg | bool
+      register: kubeconfig_path_set
+
+    - name: Source bashrc file content
+      shell: source {{ ansible_env.HOME }}/.bashrc
+      register: bashrc_srced
+
+    - name: Verify that we are logged in using the kubeconfig file
+      command: >
+        {{ openshift_cli }} whoami 
+      when:
+        - ocp_cluster_kubeconfig is defined and ocp_cluster_kubeconfig != ""
+      register: login_out
+
+- name: Authenticate with the API
+  command: >
+    {{ openshift_cli }} login \
+      --token {{ ocp_cluster_token }} \
+      --insecure-skip-tls-verify=true {{ ocp_cluster_console_url }}:{{ ocp_cluster_console_port | d('6443', true) }}
+  when:
+    - not ocp_cluster_kubeconfig is defined or ocp_cluster_kubeconfig == ""
+    - ocp_cluster_token is defined and ocp_cluster_token != ""
+  register: login_out
+
+- name: Authenticate with the API
+  command: >
+    {{ openshift_cli }} login \
+      -u {{ ocp_cluster_user_user }} \
+      -p {{ ocp_cluster_user_password }} \
+      --insecure-skip-tls-verify=true {{ ocp_cluster_console_url }}:{{ ocp_cluster_console_port | d('6443', true) }}
+  when:
+    - not ocp_cluster_kubeconfig is defined or ocp_cluster_kubeconfig == ""
+    - ocp_cluster_token is undefined or ocp_cluster_token == ""
+    - ocp_cluster_user_user is defined and ocp_cluster_user_user != ""
+    - ocp_cluster_user_password is defined and ocp_cluster_user_password != ""
+  register: login_out
+

@@ -22,6 +22,17 @@ registry_host_fqdn: '{{ vault_registry_host_fqdn }}'
 repository_host_fqdn: '{{ vault_repository_host_fqdn }}'
 cluster_admins: '{{ vault_cluster_admins }}'
 
+
+#Cluster login information
+ocp_cluster_kubeconfig: ''
+ocp_cluster_user: ''
+ocp_cluster_user_password: ''
+ocp_cluster_token: ''
+ocp_cluster_console_url: ''
+ocp_cluster_console_port: ''
+openshift_cli: ''
+
+
 (example)
 vault_cluster_admins:
 - 'first.i.last'
