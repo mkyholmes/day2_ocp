@@ -1,0 +1,44 @@
+- name: ' Konductor | Provision UPI Infra | 01-post-deploy-configure-cluster-admins.yml'
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "configure cluster admins"
+    ansible_name_module: " Post Cluster Installation | Post deploy | {{ module }}"
+  vars_files:
+    - '../vars/vault.yml'
+    - '../vars/common.yml'
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
+      command: >
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
+
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      when:
+        - existing_session.rc > 0
+
+  tasks:
+    - name: '{{ ansible_name_module }} | command | Grant Cluster admin access to users'
+      command: >
+        {{ openshift_cli }} adm policy add-cluster-role-to-user cluster-admin '{{ item }}' 
+      loop: "{{ cluster_admins }}"
+      when:
+        - cluster_admins is defined and cluster_admins | length > 0
+      failed_when: "cluster_admins_created.rc >= 1 and not ' already exists' in cluster_admins_created.stderr"
+      register: cluster_admins_created
+
+    - name: '{{ ansible_name_module }} | command | Grant project admin access to users'
+      command: >
+        {{ openshift_cli }} adm policy add-role-to-user admin '{{ item }}' --role-namespace={{ project_admins['project'] }}
+      loop: "{{ project_admins['users'] }}"
+      when:
+        - project_admins is defined and cluster_admins | length > 0
+        - project_admins.project is defined and project_admins.project != ""
+        - project_admins.users is defined and project_admins.users | length > 0
+      failed_when: "project_admins_created.rc >= 1 and not ' already exists' in project_admins_created.stderr"
+      register: project_admins_created
+
+

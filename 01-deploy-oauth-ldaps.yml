@@ -38,6 +38,16 @@
       register: login_out
 
   tasks:
+    - name: '{{ ansible_name_module }} | oc create | Create LDAP configmap }}'
+      command: >
+        {{ openshift_cli }} create \
+          configmap ca-config-map --from-file=ca.crt={{ ca_config_map }} -n openshift-config
+
+    - name: '{{ ansible_name_module }} | oc create | Create LDAP secret }}'
+      command: >
+        {{ openshift_cli }} create \
+          secret generic ldap-secret --from-literal=bindPassword={{ bindPassword }}
+
     - name: '{{ ansible_name_module }} | template | Render Oauth Template'
       template:
         src: "templates/oauth-cluster.yml.j2"
