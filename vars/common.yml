@@ -9,6 +9,19 @@ aws_ssh_private_key_name: "sparta"
 
 variables to vault:
 
-ldap_url: "ldap://ldap.example.com/ou=users,dc=acme,dc=com?uid"
-bindPassword: secret
-ca_config_map: /path/to/ca
+ldap_url: "{{ vault_ldap_url }}" ldap://ldap.example.com/ou=users,dc=acme,dc=com?uid"
+bindPassword: "{{ vault_bindPassword }}" secret
+ca_config_map: "{{ vault_ca_config_map }}" /path/to/ca
+ocp_cluster_user_user: '{{ vault_ocp_cluster_user_user }}'
+ocp_cluster_user_password: '{{ vault_ocp_cluster_user_password }}'
+ocp_cluster_console_url: '{{ vault_ocp_cluster_console_url }}'
+ocp_cluster_console_port: '6443'
+ocp_cluster_token: '{{ vault_ocp_cluster_token }}'
+staging_dir: '/tmp'
+registry_host_fqdn: '{{ vault_registry_host_fqdn }}'
+repository_host_fqdn: '{{ vault_repository_host_fqdn }}'
+cluster_admins: '{{ vault_cluster_admins }}'
+
+(example)
+vault_cluster_admins:
+- 'first.i.last'
