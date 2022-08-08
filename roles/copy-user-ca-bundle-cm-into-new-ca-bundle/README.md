@@ -3,6 +3,7 @@ Role Name
 
 A helper role used to export an existing CA bundle configmap into a new CA bundle configmap.
 Why is this needed? There are case where a configmap exists (e.g. user-ca-bundle in the openshift-config namespace) where the key holding the actual certificate might not match the key expected by certain applications. For example the key in the user-ca-bundle configmap is ca-bundle but there are applications that expect their ca-bundle key to be named ca or something else. When that happens this helper can be used to export the existing configmap into a new one that has the expected key. 
+
 Other cases where this might be useful is where one need the exisiting certificates in order to append new certificates to it. In such cases this can still be used to export the configmap and then additional processing might be needed to extract the actual CA bundle and append the new certificates to it. That last use case is not being handled here. 
 
 Requirements
