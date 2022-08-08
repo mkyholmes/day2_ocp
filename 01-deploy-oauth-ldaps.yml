@@ -37,5 +37,14 @@
         - not ocp_cluster_token is defined or ocp_cluster_token == ""
       register: login_out
 
-  roles:
-     - { role: copy-user-ca-bundle-cm-into-new-ca-bundle }
+  tasks:
+    - name: '{{ ansible_name_module }} | template | Render Oauth Template'
+      template:
+        src: "templates/oauth-cluster.yml.j2"
+        dest: "{{ staging_dir | d('/tmp', true) }}/oauth-cluster.yml"
+
+    - name: '{{ ansible_name_module }} | command:{{ openshift_cli }} apply | deploy oauth/cluster '
+      command: >
+        {{ openshift_cli }} apply -f {{ staging_dir | d('/tmp', true) }}/oauth-cluster.yml
+      register: oauth_applied
+
