@@ -1,0 +1,126 @@
+---
+- name: '{{ ansible_name_module }} | check user ca'
+  shell: >
+    {{ openshift_cli }} get cm {{ existing_ca_bundle_cm_name | default('user-ca-bundle', false) }} -n {{ existing_ca_bundle_cm_namespace | default('openshift-config', false) }} -o yaml > "{{ new_ca_bundle_cm_file }}"
+  ignore_errors: true
+  register: user_ca_bundle_exist
+
+- name: '{{ ansible_name_module }} | check new ca cm'
+  stat:
+    path: "{{ new_ca_bundle_cm_file }}"
+  when:
+    - user_ca_bundle_exist is defined
+    - user_ca_bundle_exist.rc is defined
+    - user_ca_bundle_exist.rc == 0
+  register: new_ca_cm_exist
+
+- name: Remove unecessary metadata from exported file
+  when:
+    - new_ca_cm_exist is defined
+    - new_ca_cm_exist.stat is defined
+    - new_ca_cm_exist.stat.isreg is defined
+    - new_ca_cm_exist.stat.isreg | bool
+  block:
+    - name: Remove unecessary metadata from exported file 1 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "creationTimestamp:"
+        state: absent
+
+    - name: Remove unecessary metadata from exported file 2 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "selfLink:"
+        state: absent
+
+    - name: Remove unecessary metadata from exported file 3 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "uid: "
+        state: absent
+
+    - name: Remove unecessary metadata from exported file 4 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "resourceVersion: "
+        state: absent
+
+    - name: Remove unecessary metadata from exported file 5 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "openshift.io/generated-by: "
+        state: absent
+
+    - name: Add Markers to mark Managed Field block in CM 1 of 2
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        insertbefore: "  managedFields:"
+        line: "# BEGIN ANSIBLE MANAGED BLOCK Removing Managed Fields Block"
+        backup: "true"
+
+    - name: Add Markers to mark Managed Field block in CM 2 of 2
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        insertafter: "  operation: Update"
+        line: "# END ANSIBLE MANAGED BLOCK Removing Managed Fields Block"
+        backup: "true"
+
+    - name: Remove unecessary metadata from exported file 6 of 7
+      blockinfile:
+        marker: "# {mark} ANSIBLE MANAGED BLOCK Removing Managed Fields Block"
+        path: "{{ new_ca_bundle_cm_file }}"
+        backup: "true"
+        block: |
+          managedFields:
+          - apiVersion: v1
+            fieldsType: FieldsV1
+            fieldsV1:
+              f:data:
+                .: {}
+                f:ca-bundle.crt: {}
+            manager: cluster-bootstrap
+            operation: Update
+        state: absent
+
+    - name: Remove unecessary metadata from exported file 7 of 7
+      lineinfile:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "   time:"
+        state: absent
+
+    - name: Update CA CM name in exported file 1 of 2
+      replace:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "{{ existing_ca_bundle_cm_name | default('user-ca-bundle', false) }}"
+        replace: "{{ new_ca_bundle_cm_name | default('user-new-ca', false) }}"
+      when:
+        - new_ca_bundle_cm_name is defined
+        - new_ca_bundle_cm_name != ''
+
+    - name: Update CA CM name in exported file 2 of 2
+      replace:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "{{ existing_ca_bundle_cert_key | default('ca-bundle.crt', false) }}"
+        replace: "{{ new_ca_bundle_cert_key | default('ca.crt', false) }}"
+      when:
+        - new_ca_bundle_cert_key is defined
+        - new_ca_bundle_cert_key != ''
+
+    - name: Update namespace name in exported file
+      replace:
+        path: "{{ new_ca_bundle_cm_file }}"
+        regexp: "namespace: {{ existing_ca_bundle_cm_namespace | default('openshift-config', false) }}"
+        replace: "namespace: {{ new_ca_bundle_cm_namespace }}"
+      when:
+        - new_ca_bundle_cm_namespace is defined
+        - new_ca_bundle_cm_namespace != ''
+        - update_new_ca_bundle_cm_namespace is defined
+        - update_new_ca_bundle_cm_namespace | bool
+
+- name: '{{ ansible_name_module }} | create user new CA CM'
+  command: >
+    {{ openshift_cli }} apply -f "{{ new_ca_bundle_cm_file }}"
+  when:
+    - create_new_ca_bundle_cm is defined
+    - create_new_ca_bundle_cm | bool
+  register: new_ca_created
