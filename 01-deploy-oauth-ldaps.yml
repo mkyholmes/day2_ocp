@@ -1,41 +1,25 @@
-- hosts: localhost
+---
+- name: ' Konductor | Provision UPI Infra | 01-deploy-oauth-ldaps.yml'
+  hosts: localhost
   vars:
     ansible_python_interpreter: /usr/bin/python3
+    module: "deploy oauth ldaps"
+    ansible_name_module: " Post Cluster Installation | Post deploy | {{ module }}"
   vars_files:
-    - 'vars/vault.yml'
-    - 'vars/global.yml'
-  vars:
-    module: "Export existing user-ca-bundle"
-    ansible_name_module: "Export CA bundle CM | {{ module }}" 
+    - '../vars/vault.yml'
+    - '../vars/common.yml'
+
   pre_tasks:
-    - name: Install required pip library
-      pip:
-        name: openshift
-        state: present
-
-    - name: Ensure Proper Python dependency is installed for Openshift
-      python_requirements_facts:
-        dependencies:
-          - openshift
-          - requests
-    - name: Authenticate with the API
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
       command: >
-        {{ openshift_cli }} login \
-          --token {{ ocp_cluster_token }} \
-          --insecure-skip-tls-verify=true {{ ocp_cluster_console_url }}:{{ ocp_cluster_console_port | d('6443', true) }}
-      when:
-        - ocp_cluster_token is defined and ocp_cluster_token != ""
-      register: login_out
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
 
-    - name: Authenticate with the API
-      command: >
-        {{ openshift_cli }} login \
-          -u {{ ocp_cluster_user }} \
-          -p {{ ocp_cluster_user_password }} \
-          --insecure-skip-tls-verify=true {{ ocp_cluster_console_url }}:{{ ocp_cluster_console_port | d('6443', true) }}
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
       when:
-        - not ocp_cluster_token is defined or ocp_cluster_token == ""
-      register: login_out
+        - existing_session.rc > 0
 
   tasks:
     - name: '{{ ansible_name_module }} | oc create | Create LDAP configmap }}'
