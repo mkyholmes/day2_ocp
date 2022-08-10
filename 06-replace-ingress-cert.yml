@@ -1,0 +1,50 @@
+---
+- name: ' Konductor | Provision UPI Infra | 06-replace-ingress-cert.yml'
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "configure ingress cert"
+    ansible_name_module: " Post Cluster Installation | Post deploy | {{ module }}"
+  vars_files:
+    - '../vars/vault.yml'
+    - '../vars/common.yml'
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
+      command: >
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
+
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      when:
+        - existing_session.rc > 0
+
+  tasks:
+    - name: '{{ ansible_name_module }} | oc create | Create custom-ca configmap'
+      command: >
+        oc create configmap custom-ca \
+      --from-file=ca-bundle.crt={{ ca-bundle.crt }} \
+      -n openshift-config
+
+    - name: '{{ ansible_name_module }} | oc patch | Patch cluster proxy'
+      command: >
+        oc patch proxy/cluster \
+     --type=merge \
+     --patch='{"spec":{"trustedCA":{"name":"custom-ca"}}}'
+
+    - name: '{{ ansible_name_module }} | oc create | Create ingress secret'
+      command: >
+        oc create secret tls ingress-ca \
+      --cert={{ ca-bundle-crt }} \
+      --key={{ ca-bundle-key }} \
+      -n openshift-ingress
+
+    - name: '{{ ansible_name_module }} | oc patch | Patch cluster proxy'
+      command: >
+        oc patch proxy/cluster \
+     --type=merge -p \
+     '{"spec":{"defaultCertificate": {"name": "ingress-ca"}}}' \
+     -n openshift-ingress-operator
+

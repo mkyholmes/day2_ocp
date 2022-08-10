@@ -1,0 +1,30 @@
+---
+- name: ' Konductor | Provision UPI Infra | 08-encrypt-etcd.yml'
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "encryptd etcd"
+    ansible_name_module: " Post Cluster Installation | Post deploy | {{ module }}"
+  vars_files:
+    - '../vars/vault.yml'
+    - '../vars/common.yml'
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
+      command: >
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
+
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      when:
+        - existing_session.rc > 0
+
+  tasks:
+
+    - name: '{{ ansible_name_module }} | oc patch | Patch apiserver'
+      command: >
+        oc patch apiserver \
+     --type=merge -p \
+     '{"spec":{"encyption": {"type": "aescbc"}}}'
