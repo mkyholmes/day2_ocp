@@ -25,7 +25,7 @@
     - name: '{{ ansible_name_module }} | oc create | Create LDAP configmap }}'
       command: >
         {{ openshift_cli }} create \
-          configmap custom-ca --from-file=ca.crt={{ ca-bundle-crt }} -n openshift-config
+          configmap custom-ca --from-file=ca.crt="{{ ca-bundle-crt }}" -n openshift-config
 
     - name: '{{ ansible_name_module }} | oc create | Create LDAP secret }}'
       command: >
