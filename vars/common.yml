@@ -6,6 +6,7 @@ use_keycloak_ca: "false"
 keycloak_ca_cm_name: "ca-bundle"
 custom_ca_cm_file: "/tmp/ca-bundle.yml"
 aws_ssh_private_key_name: "sparta"
+staging_dir: '/tmp'
 
 variables to vault:
 
@@ -17,11 +18,11 @@ ocp_cluster_user_password: '{{ vault_ocp_cluster_user_password }}'
 ocp_cluster_console_url: '{{ vault_ocp_cluster_console_url }}'
 ocp_cluster_console_port: '6443'
 ocp_cluster_token: '{{ vault_ocp_cluster_token }}'
-staging_dir: '/tmp'
 registry_host_fqdn: '{{ vault_registry_host_fqdn }}'
 repository_host_fqdn: '{{ vault_repository_host_fqdn }}'
 cluster_admins: '{{ vault_cluster_admins }}'
-
+cluster_name: '{{ vault_cluster_name }}'
+fqdn: '{{ vault_fqdn }}'
 
 #Cluster login information
 ocp_cluster_kubeconfig: ''

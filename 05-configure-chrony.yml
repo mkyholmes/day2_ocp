@@ -1,0 +1,48 @@
+---
+- name: ' Konductor | Provision UPI Infra | 01-post-deploy-configure-cluster-admins.yml'
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "configure chronyd"
+    ansible_name_module: " Post Cluster Installation | Post deploy | {{ module }}"
+  vars_files:
+    - '../vars/vault.yml'
+    - '../vars/common.yml'
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
+      command: >
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
+
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      when:
+        - existing_session.rc > 0
+
+  tasks:
+    - name: '{{ ansible_name_module }} | install butane | Install required package'
+      package:
+        name: butane
+        state: present
+
+    - name: '{{ ansible_name_module }} | butane | Convert master butane config to yaml'
+      command: >
+        butane templates/99-master-chrony-conf-override.bu -o {{ staging_dir }}/99-master-chrony-conf-override.yaml 
+      register: master_chrony
+
+    - name: '{{ ansible_name_module }} | butane | Convert worker butane config to yaml'
+      command: >
+        butane templates/99-worker-chrony-conf-override.bu -o {{ staging_dir }}/99-worker-chrony-conf-override.yaml
+      register: worker_chrony
+
+    - name: '{{ ansible_name_module }} | oc apply | Create master chrony'
+      command: >
+        oc apply -f {{ staging_dir}}/99-master-chrony-conf-override.yaml
+      when: master_chrony.stat.exists
+
+    - name: '{{ ansible_name_module }} | oc apply | Create worker chrony'
+      command: >
+        oc apply -f {{ staging_dir}}/99-master-chrony-conf-override.yaml
+      when: worker_chrony.stat.exists
