@@ -17,7 +17,7 @@
       register: existing_session
 
     - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
-      import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      import_tasks: roles/ocp-cluster-login/tasks/main.yml
       when:
         - existing_session.rc > 0
 
