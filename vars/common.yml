@@ -25,13 +25,13 @@ cluster_name: '{{ vault_cluster_name }}'
 fqdn: '{{ vault_fqdn }}'
 
 #Cluster login information
-ocp_cluster_kubeconfig: ''
-ocp_cluster_user: ''
-ocp_cluster_user_password: ''
-ocp_cluster_token: ''
-ocp_cluster_console_url: ''
-ocp_cluster_console_port: ''
-openshift_cli: ''
+ocp_cluster_kubeconfig: '{{ vault_ocp_cluster_Kubeconfig }}'
+ocp_cluster_user: '{{ vault_ocp_cluster_user }}'
+ocp_cluster_user_password: '{{ vault_ocp_cluster_user_password }}'
+ocp_cluster_token: '{{ vault_ocp_cluster_token }}'
+ocp_cluster_console_url: '{{ vault_ocp_cluster_console_url }}'
+ocp_cluster_console_port: '{{ vault_ocp_cluster_console_port }}'
+openshift_cli: '{{ vault_openshift_cli }}'
 
 
 (example)
