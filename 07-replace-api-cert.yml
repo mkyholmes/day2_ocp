@@ -22,6 +22,12 @@
         - existing_session.rc > 0
 
   tasks:
+    - name: '{{ ansible_name_module }} | oc create | Create api secret'
+      command: >
+        oc create secret tls api-ca \
+      --cert={{ api-bundle-crt }} \
+      --key={{ api-bundle-key }} \
+      -n openshift-ingress
 
     - name: '{{ ansible_name_module }} | oc patch | Patch cluster proxy'
       command: >
@@ -29,4 +35,4 @@
      --type=merge -p \
      '{"spec":{"servingCerts": {"namedCertificates":
      [{"names": ["{{ fqdn }}"], 
-     "servingCertificate": {"name": "ingress-ca"}}]}}}' 
+     "servingCertificate": {"name": "api-ca"}}]}}}' 

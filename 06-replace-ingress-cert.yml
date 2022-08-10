@@ -24,21 +24,21 @@
   tasks:
     - name: '{{ ansible_name_module }} | oc create | Create custom-ca configmap'
       command: >
-        oc create configmap custom-ca \
-      --from-file=ca-bundle.crt={{ ca-bundle.crt }} \
+        oc create configmap ingress-ca \
+      --from-file=ca-bundle.crt={{ ca-bundle-cert }} \
       -n openshift-config
 
     - name: '{{ ansible_name_module }} | oc patch | Patch cluster proxy'
       command: >
         oc patch proxy/cluster \
      --type=merge \
-     --patch='{"spec":{"trustedCA":{"name":"custom-ca"}}}'
+     --patch='{"spec":{"trustedCA":{"name":"ingress-ca"}}}'
 
     - name: '{{ ansible_name_module }} | oc create | Create ingress secret'
       command: >
         oc create secret tls ingress-ca \
-      --cert={{ ca-bundle-crt }} \
-      --key={{ ca-bundle-key }} \
+      --cert={{ ingress-bundle-cert }} \
+      --key={{ ingress-bundle-key }} \
       -n openshift-ingress
 
     - name: '{{ ansible_name_module }} | oc patch | Patch cluster proxy'
